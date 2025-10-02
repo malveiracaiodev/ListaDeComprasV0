@@ -21,35 +21,33 @@ class _ListaPageState extends State<ListaPage> {
   List<Map<String, dynamic>> itens = [];
   double total = 0;
 
-
-@override
-void didChangeDependencies() {
-  super.didChangeDependencies();
-
-  if (!carregouArgumentos) {
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args != null && args is List<Map<String, dynamic>>) {
-      for (var item in args) {
-        itens.add({
-          "produto": item['produto'],
-          "marca": '',
-          "valor": 0.0,
-          "quantidade": item['quantidade'],
-        });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!carregouArgumentos) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args != null && args is List<Map<String, dynamic>>) {
+        for (var item in args) {
+          itens.add({
+            "produto": item['produto'],
+            "marca": '',
+            "valor": 0.0,
+            "quantidade": item['quantidade'],
+          });
+        }
       }
+      carregouArgumentos = true;
     }
-    carregouArgumentos = true;
   }
-}
 
   void adicionarItem() {
-    final produto = produtoCtrl.text;
-    final marca = marcaCtrl.text;
+    final produto = produtoCtrl.text.trim();
+    final marca = marcaCtrl.text.trim();
     final valorTexto = valorCtrl.text.replaceAll(',', '.');
     final valor = double.tryParse(valorTexto) ?? 0;
     final quantidade = int.tryParse(quantidadeCtrl.text) ?? 1;
 
-    if (produto.isEmpty || marca.isEmpty || valor <= 0) return;
+    if (produto.isEmpty || valor <= 0) return;
 
     setState(() {
       itens.add({
@@ -69,21 +67,131 @@ void didChangeDependencies() {
     marcaCtrl.clear();
     valorCtrl.clear();
     quantidadeCtrl.clear();
+    salvarListaAtual();
+  }
+
+  void removerItem(int index) {
+    final item = itens[index];
+    setState(() {
+      total -= item['valor'] * item['quantidade'];
+      itens.removeAt(index);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Item "${item['produto']}" removido')),
+    );
+
+    salvarListaAtual();
+  }
+
+  void editarItem(int index) {
+    final item = itens[index];
+
+    produtoCtrl.text = item['produto'];
+    marcaCtrl.text = item['marca'];
+    valorCtrl.text = item['valor'].toString();
+    quantidadeCtrl.text = item['quantidade'].toString();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Editar Item'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: produtoCtrl,
+              decoration: campoEstilizado('Produto', Icons.shopping_cart),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: marcaCtrl,
+              decoration:
+                  campoEstilizado('Marca (opcional)', Icons.local_offer),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: valorCtrl,
+              decoration: campoEstilizado('Valor', Icons.attach_money),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: quantidadeCtrl,
+              decoration: campoEstilizado('Quantidade', Icons.numbers),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final novoProduto = produtoCtrl.text.trim();
+              final novaMarca = marcaCtrl.text.trim();
+              final novoValor =
+                  double.tryParse(valorCtrl.text.replaceAll(',', '.')) ?? 0;
+              final novaQtd = int.tryParse(quantidadeCtrl.text) ?? 1;
+
+              if (novoProduto.isEmpty || novoValor <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content:
+                          Text('Preencha os campos obrigatórios corretamente')),
+                );
+                return;
+              }
+
+              setState(() {
+                total -= item['valor'] * item['quantidade'];
+                itens[index] = {
+                  "produto": novoProduto,
+                  "marca": novaMarca,
+                  "valor": novoValor,
+                  "quantidade": novaQtd,
+                };
+                total += novoValor * novaQtd;
+              });
+
+              Navigator.pop(context);
+              salvarListaAtual();
+              produtoCtrl.clear();
+              marcaCtrl.clear();
+              valorCtrl.clear();
+              quantidadeCtrl.clear();
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
   }
 
   InputDecoration campoEstilizado(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
       hintText: 'Digite $label...',
-      prefixIcon: Icon(icon),
+      prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
-      fillColor: Colors.grey[100],
+      fillColor: Theme.of(context).cardColor,
+      hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+      labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.bodyMedium;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Modo Comprando')),
       body: Padding(
@@ -91,25 +199,54 @@ void didChangeDependencies() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(controller: mercadoCtrl, decoration: campoEstilizado('Supermercado', Icons.store)),
+            TextField(
+              controller: mercadoCtrl,
+              decoration: campoEstilizado('Supermercado', Icons.store),
+              style: textStyle,
+            ),
             const SizedBox(height: 10),
-
             Row(
               children: [
-                Expanded(child: TextField(controller: produtoCtrl, decoration: campoEstilizado('Produto', Icons.shopping_cart))),
+                Expanded(
+                  child: TextField(
+                    controller: produtoCtrl,
+                    decoration: campoEstilizado('Produto', Icons.shopping_cart),
+                    style: textStyle,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: TextField(controller: marcaCtrl, decoration: campoEstilizado('Marca', Icons.local_offer))),
+                Expanded(
+                  child: TextField(
+                    controller: marcaCtrl,
+                    decoration:
+                        campoEstilizado('Marca (opcional)', Icons.local_offer),
+                    style: textStyle,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: TextField(controller: valorCtrl, decoration: campoEstilizado('Valor', Icons.attach_money), keyboardType: TextInputType.number)),
+                Expanded(
+                  child: TextField(
+                    controller: valorCtrl,
+                    decoration: campoEstilizado('Valor', Icons.attach_money),
+                    keyboardType: TextInputType.number,
+                    style: textStyle,
+                  ),
+                ),
                 const SizedBox(width: 8),
-                Expanded(child: TextField(controller: quantidadeCtrl, decoration: campoEstilizado('Quantidade', Icons.numbers), keyboardType: TextInputType.number)),
+                Expanded(
+                  child: TextField(
+                    controller: quantidadeCtrl,
+                    decoration: campoEstilizado('Quantidade', Icons.numbers),
+                    keyboardType: TextInputType.number,
+                    style: textStyle,
+                  ),
+                ),
               ],
             ),
-
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -128,46 +265,51 @@ void didChangeDependencies() {
                 ),
               ],
             ),
-
             const SizedBox(height: 20),
             const Divider(height: 30, thickness: 1),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.attach_money, color: Colors.green, size: 28),
+                Icon(Icons.attach_money,
+                    color: Theme.of(context).colorScheme.primary, size: 28),
                 const SizedBox(width: 6),
                 Text(
                   "Total: R\$ ${total.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
-                  ),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
               ],
             ),
-
             const SizedBox(height: 10),
-
             Expanded(
               child: ListView.builder(
                 itemCount: itens.length,
                 itemBuilder: (context, index) {
                   final item = itens[index];
                   return Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    color: Theme.of(context).cardColor,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     elevation: 2,
                     margin: const EdgeInsets.symmetric(vertical: 6),
                     child: ListTile(
-                      leading: const Icon(Icons.shopping_bag, color: Colors.green),
-                      title: Text("${item['produto']} (${item['quantidade']}x) - ${item['marca']}"),
-                      subtitle: Text("R\$ ${(item['valor'] * item['quantidade']).toStringAsFixed(2)}"),
+                      leading: Icon(Icons.shopping_bag,
+                          color: Theme.of(context).colorScheme.primary),
+                      title: Text(
+                        "${item['produto']} (${item['quantidade']}x) - ${item['marca']}",
+                        style: textStyle,
+                      ),
+                      subtitle: Text(
+                        "R\$ ${(item['valor'] * item['quantidade']).toStringAsFixed(2)}",
+                        style: textStyle,
+                      ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            icon: Icon(Icons.edit,
+                                color: Theme.of(context).colorScheme.secondary),
                             onPressed: () => editarItem(index),
                           ),
                           IconButton(
@@ -187,104 +329,16 @@ void didChangeDependencies() {
     );
   }
 
-  void editarItem(int index) {
-    final item = itens[index];
-
-    produtoCtrl.text = item['produto'];
-    marcaCtrl.text = item['marca'];
-    valorCtrl.text = item['valor'].toString();
-    quantidadeCtrl.text = item['quantidade'].toString();
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Editar Item'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: produtoCtrl, decoration: campoEstilizado('Produto', Icons.shopping_cart)),
-            const SizedBox(height: 8),
-            TextField(controller: marcaCtrl, decoration: campoEstilizado('Marca', Icons.local_offer)),
-            const SizedBox(height: 8),
-            TextField(controller: valorCtrl, decoration: campoEstilizado('Valor', Icons.attach_money), keyboardType: TextInputType.number),
-            const SizedBox(height: 8),
-            TextField(controller: quantidadeCtrl, decoration: campoEstilizado('Quantidade', Icons.numbers), keyboardType: TextInputType.number),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final novoProduto = produtoCtrl.text;
-              final novaMarca = marcaCtrl.text;
-              final novoValor = double.tryParse(valorCtrl.text.replaceAll(',', '.')) ?? 0;
-              final novaQtd = int.tryParse(quantidadeCtrl.text) ?? 1;
-
-              if (novoProduto.isEmpty || novaMarca.isEmpty || novoValor <= 0) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Preencha todos os campos corretamente')),
-                );
-                return;
-              }
-
-              setState(() {
-                total -= item['valor'] * item['quantidade'];
-                itens[index] = {
-                  "produto": novoProduto,
-                  "marca": novaMarca,
-                  "valor": novoValor,
-                  "quantidade": novaQtd,
-                };
-                total += novoValor * novaQtd;
-              });
-
-              salvarListaAtual();
-
-              produtoCtrl.clear();
-              marcaCtrl.clear();
-              valorCtrl.clear();
-              quantidadeCtrl.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Salvar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void removerItem(int index) {
-    setState(() {
-      total -= itens[index]['valor'] * itens[index]['quantidade'];
-      itens.removeAt(index);
-    });
-    salvarListaAtual();
-  }
-
-  void salvarListaAtual() async {
+  Future<void> salvarListaAtual() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final novaLista = {
+    final listaCompleta = {
       "mercado": mercadoCtrl.text,
       "itens": itens,
       "total": total,
       "data": DateTime.now().toIso8601String(),
     };
 
-    final listasExistentes = prefs.getStringList('listas_salvas') ?? [];
-    listasExistentes.add(jsonEncode(novaLista));
-
-    await prefs.setStringList('listas_salvas', listasExistentes);
+    await prefs.setString('lista_atual', jsonEncode(listaCompleta));
   }
-
- @override
-void dispose() {
-  if (itens.isNotEmpty) {
-    salvarListaAtual();
-  }
-  super.dispose();
-}
 }

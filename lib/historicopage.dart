@@ -9,6 +9,7 @@ class HistoricoPage extends StatefulWidget {
   @override
   State<HistoricoPage> createState() => _HistoricoPageState();
 }
+
 class _HistoricoPageState extends State<HistoricoPage> {
   List<Map<String, dynamic>> historico = [];
 
@@ -19,76 +20,112 @@ class _HistoricoPageState extends State<HistoricoPage> {
   }
 
   void carregarHistorico() async {
-  final prefs = await SharedPreferences.getInstance();
-  final listasJson = prefs.getStringList('listas_salvas') ?? [];
+    final prefs = await SharedPreferences.getInstance();
+    final listasJson = prefs.getStringList('listas_salvas') ?? [];
 
-  final listasDecodificadas = listasJson.map((json) => jsonDecode(json)).toList();
+    final listasDecodificadas =
+        listasJson.map((json) => jsonDecode(json)).toList();
 
-  setState(() {
-    historico = List<Map<String, dynamic>>.from(listasDecodificadas);
-  });
+    setState(() {
+      historico = List<Map<String, dynamic>>.from(listasDecodificadas);
+    });
   }
-void excluirLista(int index) async {
-  final prefs = await SharedPreferences.getInstance();
-  final listasJson = prefs.getStringList('listas_salvas') ?? [];
 
-  listasJson.removeAt(index);
-  await prefs.setStringList('listas_salvas', listasJson);
+  void excluirLista(int index) async {
+    final prefs = await SharedPreferences.getInstance();
+    final listasJson = prefs.getStringList('listas_salvas') ?? [];
 
-  setState(() {
-    historico.removeAt(index);
-  });
-}
+    listasJson.removeAt(index);
+    await prefs.setStringList('listas_salvas', listasJson);
+
+    setState(() {
+      historico.removeAt(index);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final titleStyle = Theme.of(context).textTheme.titleLarge;
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Histórico de Listas')),
       body: historico.isEmpty
-          ? const Center(child: Text('Nenhuma lista salva'))
+          ? Center(
+              child: Text(
+                'Nenhuma lista salva',
+                style: bodyStyle,
+              ),
+            )
           : ListView.builder(
               itemCount: historico.length,
               itemBuilder: (context, index) {
-            final lista = historico[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      lista['mercado'] ?? 'Supermercado',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text("Total: R\$ ${lista['total'].toStringAsFixed(2)}"),
-                    if (lista['data'] != null)
-                      Text("Data: ${DateFormat('dd/MM/yyyy – HH:mm').format(DateTime.parse(lista['data']))}"),
-
-                    const SizedBox(height: 8),
-                    const Text("Itens:", style: TextStyle(fontWeight: FontWeight.bold)),
-                    ...List<Widget>.from((lista['itens'] as List).map((item) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          "- ${item['produto']} (${item['quantidade']}x) ${item['marca']} - R\$ ${(item['valor'] * item['quantidade']).toStringAsFixed(2)}",
-                        ),
+                final lista = historico[index];
+                return Card(
+                  color: Theme.of(context).cardColor,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      // 👉 Ao tocar, abre a ListaPage com os itens salvos
+                      Navigator.pushNamed(
+                        context,
+                        '/lista',
+                        arguments: (lista['itens'] as List)
+                            .map((e) => Map<String, dynamic>.from(e))
+                            .toList(),
                       );
-                    })),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => excluirLista(index),
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            lista['mercado'] ?? 'Supermercado',
+                            style: titleStyle,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Total: R\$ ${lista['total'].toStringAsFixed(2)}",
+                            style: bodyStyle,
+                          ),
+                          if (lista['data'] != null)
+                            Text(
+                              "Data: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(lista['data']))}",
+                              style: bodyStyle,
+                            ),
+                          const SizedBox(height: 8),
+                          Text("Itens:",
+                              style: bodyStyle?.copyWith(
+                                  fontWeight: FontWeight.bold)),
+                          ...List<Widget>.from(
+                              (lista['itens'] as List).map((item) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text(
+                                "- ${item['produto']} (${item['quantidade']}x) ${item['marca']} - R\$ ${(item['valor'] * item['quantidade']).toStringAsFixed(2)}",
+                                style: bodyStyle,
+                              ),
+                            );
+                          })),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => excluirLista(index),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-      );
+                  ),
+                );
+              },
+            ),
+    );
   }
 }

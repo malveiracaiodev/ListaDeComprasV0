@@ -1,8 +1,8 @@
 name: lista_de_compras
 description: Um app simples para gerenciar listas de compras.
-publish_to: 'none' # Isso impede que o app seja publicado no pub.dev
+publish_to: 'none'
 
-version: 1.0.0+1 # Versão do app (major.minor.patch+build)
+version: 1.0.0+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -10,22 +10,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # Pacotes que estou usando
   shared_preferences: ^2.2.2
-  intl: ^0.18.1 # Para formatar datas
-  cupertino_icons: ^1.0.6 # Ícones padrão do iOS
+  intl: ^0.18.1
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
 
-
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path:  "assets/icon.png"
+  image_path: assets/icon.png
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/meu_logotipo.png
