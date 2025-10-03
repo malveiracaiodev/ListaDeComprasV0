@@ -19,7 +19,7 @@ InputDecoration campoEstilizado(
     filled: true,
     fillColor: Theme.of(context).cardColor,
     hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          color: Theme.of(context).colorScheme.onSurface.withAlpha(150),
         ),
     labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: Theme.of(context).colorScheme.onSurface,
@@ -90,6 +90,8 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
     final listaFormatada = listaPreparada.map((item) {
       return {
         "produto": item['produto'],
+        "marca": '',
+        "valor": 0.0,
         "quantidade": item['quantidade'],
       };
     }).toList();
@@ -97,12 +99,22 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
     Navigator.pushNamed(
       context,
       '/comprando',
-      arguments: listaFormatada,
+      arguments: {
+        'lista': {
+          'mercado': '',
+          'itens': listaFormatada,
+          'total': 0.0,
+          'data': DateTime.now().toIso8601String(),
+        },
+        'index': null,
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.bodyMedium;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Lista de Compras')),
       body: Padding(
@@ -116,7 +128,7 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
                     controller: produtoCtrl,
                     decoration:
                         campoEstilizado(context, 'Produto', Icons.shopping_bag),
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: textStyle,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -126,7 +138,7 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
                     controller: quantidadeCtrl,
                     decoration: campoEstilizado(context, 'Qtd', Icons.numbers),
                     keyboardType: TextInputType.number,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: textStyle,
                   ),
                 ),
               ],
@@ -164,7 +176,7 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
                           color: Theme.of(context).colorScheme.primary),
                       title: Text(
                         "${item['produto']} (${item['quantidade']}x)",
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: textStyle,
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),

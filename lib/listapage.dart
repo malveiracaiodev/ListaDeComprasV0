@@ -322,7 +322,7 @@ class _ListaPageState extends State<ListaPage> {
               label: const Text('Salvar no Histórico'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Colors.black, // texto preto
+                foregroundColor: Colors.black,
               ),
               onPressed: itens.isEmpty ? null : salvarListaNoHistorico,
             ),
