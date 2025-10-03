@@ -222,6 +222,23 @@ class _ListaPageState extends State<ListaPage> {
               decoration: campoEstilizado('Supermercado', Icons.store),
               style: textStyle,
             ),
+            if (indexEdicao != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, color: Colors.orangeAccent),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Editando lista salva',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.orangeAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 10),
             Row(
               children: [
