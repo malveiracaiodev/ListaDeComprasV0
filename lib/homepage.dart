@@ -8,24 +8,26 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> {
   final List<Widget> estrelas = [];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => gerarEstrelas());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      gerarEstrelas(screenWidth);
+    });
   }
 
-  void gerarEstrelas() {
-    final screenWidth = MediaQuery.of(context).size.width;
-    for (int i = 0; i < 100; i++) {
-      final random = Random();
+  void gerarEstrelas(double screenWidth) {
+    estrelas.clear(); // evita acúmulo em hot reload
+    final random = Random();
+    estrelas.addAll(List.generate(100, (i) {
       final left = random.nextDouble() * screenWidth;
       final delay = random.nextInt(5000);
-      estrelas.add(_estrelaAnimada(left, delay));
-    }
+      return _estrelaAnimada(left, delay);
+    }));
     setState(() {});
   }
 
@@ -74,7 +76,7 @@ class _HomePageState extends State<HomePage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Bem-vindo ao seu universo de compras 🛒',
+                    'Bem-vindo à sua organização de compras 🛒',
                     style: textStyle?.copyWith(
                       color: Theme.of(context).colorScheme.primary,
                     ),
@@ -118,6 +120,7 @@ class _HomePageState extends State<HomePage>
                     'assets/meu_logotipo.png',
                     height: 100,
                     fit: BoxFit.contain,
+                    semanticLabel: 'Logotipo do aplicativo',
                   ),
                 ],
               ),

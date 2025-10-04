@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
-import '../homepage.dart';
-import './historicopage.dart';
-import './listapreparadapage.dart';
-import './listapage.dart';
-import './fundo_cosmico.dart'; // novo fundo cósmico
+import 'package:provider/provider.dart';
+
+import 'homepage.dart';
+import 'listapreparadapage.dart' hide ListaProvider;
+import 'listapage.dart' hide ListaProvider;
+import 'historicopage.dart';
+import 'fundo_cosmico.dart';
+import 'listaprovider.dart';
 
 void main() {
-  runApp(const ListaComprasApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ListaProvider(),
+      child: const ListaComprasApp(),
+    ),
+  );
 }
 
 class ListaComprasApp extends StatelessWidget {

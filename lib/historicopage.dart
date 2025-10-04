@@ -66,6 +66,17 @@ class _HistoricoPageState extends State<HistoricoPage> {
     }
   }
 
+  void reutilizarLista(Map<String, dynamic> listaOriginal) {
+    Navigator.pushNamed(
+      context,
+      '/comprando',
+      arguments: {
+        'lista': listaOriginal,
+        'index': null,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final titleStyle = Theme.of(context).textTheme.titleLarge;
@@ -90,51 +101,61 @@ class _HistoricoPageState extends State<HistoricoPage> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => editarLista(lista, index),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lista['mercado'] ?? 'Supermercado',
+                          style: titleStyle,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Total: R\$ ${lista['total'].toStringAsFixed(2)}",
+                          style: bodyStyle,
+                        ),
+                        if (lista['data'] != null)
                           Text(
-                            lista['mercado'] ?? 'Supermercado',
-                            style: titleStyle,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Total: R\$ ${lista['total'].toStringAsFixed(2)}",
+                            "Data: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(lista['data']))}",
                             style: bodyStyle,
                           ),
-                          if (lista['data'] != null)
-                            Text(
-                              "Data: ${DateFormat('dd/MM/yyyy').format(DateTime.parse(lista['data']))}",
+                        const SizedBox(height: 8),
+                        Text("Itens:",
+                            style: bodyStyle?.copyWith(
+                                fontWeight: FontWeight.bold)),
+                        ...List<Widget>.from(
+                            (lista['itens'] as List).map((item) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              "- ${item['produto']} (${item['quantidade']}x) ${item['marca']} - R\$ ${(item['valor'] * item['quantidade']).toStringAsFixed(2)}",
                               style: bodyStyle,
                             ),
-                          const SizedBox(height: 8),
-                          Text("Itens:",
-                              style: bodyStyle?.copyWith(
-                                  fontWeight: FontWeight.bold)),
-                          ...List<Widget>.from(
-                              (lista['itens'] as List).map((item) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2),
-                              child: Text(
-                                "- ${item['produto']} (${item['quantidade']}x) ${item['marca']} - R\$ ${(item['valor'] * item['quantidade']).toStringAsFixed(2)}",
-                                style: bodyStyle,
-                              ),
-                            );
-                          })),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: IconButton(
+                          );
+                        })),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.shopping_cart),
+                              tooltip: 'Reutilizar no modo de compra',
+                              onPressed: () => reutilizarLista(lista),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit),
+                              tooltip: 'Editar lista',
+                              onPressed: () => editarLista(lista, index),
+                            ),
+                            IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: 'Excluir lista',
                               onPressed: () => excluirLista(index),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 );

@@ -7,10 +7,12 @@ class FundoCosmico extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final random = Random();
+
     final estrelas = List.generate(100, (index) {
-      final random = Random();
-      final left = random.nextDouble() * MediaQuery.of(context).size.width;
-      final top = random.nextDouble() * MediaQuery.of(context).size.height;
+      final left = random.nextDouble() * size.width;
+      final top = random.nextDouble() * size.height;
       return Positioned(
         top: top,
         left: left,
@@ -27,6 +29,7 @@ class FundoCosmico extends StatelessWidget {
 
     return Stack(
       children: [
+        // Fundo gradiente cósmico
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -36,8 +39,10 @@ class FundoCosmico extends StatelessWidget {
             ),
           ),
         ),
+        // Estrelas posicionadas aleatoriamente
         ...estrelas,
-        child,
+        // Conteúdo principal
+        SafeArea(child: child),
       ],
     );
   }

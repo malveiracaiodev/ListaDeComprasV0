@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:provider/provider.dart';
 
 class ListaPreparadaPage extends StatefulWidget {
   const ListaPreparadaPage({super.key});
@@ -31,81 +30,40 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
   final TextEditingController produtoCtrl = TextEditingController();
   final TextEditingController quantidadeCtrl = TextEditingController();
 
-  List<Map<String, dynamic>> listaPreparada = [];
-
-  @override
-  void initState() {
-    super.initState();
-    carregarLista();
-  }
-
-  void adicionarItem() {
+  void adicionarItem(BuildContext context) {
     final produto = produtoCtrl.text.trim();
     final quantidade = int.tryParse(quantidadeCtrl.text) ?? 1;
 
     if (produto.isEmpty) return;
 
-    setState(() {
-      listaPreparada.add({
-        "produto": produto,
-        "quantidade": quantidade,
-      });
-    });
+    final provider = Provider.of<ListaProvider>(context, listen: false);
+    provider.adicionarItemPreparado('$produto (${quantidade}x)');
 
     produtoCtrl.clear();
     quantidadeCtrl.clear();
-    salvarLista();
   }
 
-  void removerItem(int index) {
-    setState(() {
-      listaPreparada.removeAt(index);
-    });
-    salvarLista();
+  void removerItem(BuildContext context, int index) {
+    final provider = Provider.of<ListaProvider>(context, listen: false);
+    provider.removerItemPreparado(index);
   }
 
-  void salvarLista() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('lista_preparada', jsonEncode(listaPreparada));
-  }
+  void irParaModoComprando(BuildContext context) {
+    final provider = Provider.of<ListaProvider>(context, listen: false);
 
-  void carregarLista() async {
-    final prefs = await SharedPreferences.getInstance();
-    final json = prefs.getString('lista_preparada');
-    if (json != null) {
-      setState(() {
-        listaPreparada = List<Map<String, dynamic>>.from(jsonDecode(json));
-      });
-    }
-  }
-
-  void irParaModoComprando() {
-    if (listaPreparada.isEmpty) {
+    if (provider.listaPreparada.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Adicione itens antes de continuar')),
       );
       return;
     }
 
-    final listaFormatada = listaPreparada.map((item) {
-      return {
-        "produto": item['produto'],
-        "marca": '',
-        "valor": 0.0,
-        "quantidade": item['quantidade'],
-      };
-    }).toList();
+    provider.moverParaComprando();
 
     Navigator.pushNamed(
       context,
       '/comprando',
       arguments: {
-        'lista': {
-          'mercado': '',
-          'itens': listaFormatada,
-          'total': 0.0,
-          'data': DateTime.now().toIso8601String(),
-        },
         'index': null,
       },
     );
@@ -114,9 +72,10 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.bodyMedium;
+    final provider = Provider.of<ListaProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Lista de Compras')),
+      appBar: AppBar(title: const Text('Lista Preparada')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -150,13 +109,13 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.shopping_cart),
                     label: const Text('Modo Comprando'),
-                    onPressed: irParaModoComprando,
+                    onPressed: () => irParaModoComprando(context),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: adicionarItem,
+                    onPressed: () => adicionarItem(context),
                     child: const Text('Adicionar'),
                   ),
                 ),
@@ -165,9 +124,9 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
             const SizedBox(height: 20),
             Expanded(
               child: ListView.builder(
-                itemCount: listaPreparada.length,
+                itemCount: provider.listaPreparada.length,
                 itemBuilder: (context, index) {
-                  final item = listaPreparada[index];
+                  final item = provider.listaPreparada[index];
                   return Card(
                     color: Theme.of(context).cardColor,
                     margin: const EdgeInsets.symmetric(vertical: 6),
@@ -175,12 +134,12 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
                       leading: Icon(Icons.checklist,
                           color: Theme.of(context).colorScheme.primary),
                       title: Text(
-                        "${item['produto']} (${item['quantidade']}x)",
+                        "${item} (1x)", // quantidade fixa por enquanto
                         style: textStyle,
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => removerItem(index),
+                        onPressed: () => removerItem(context, index),
                       ),
                     ),
                   );
@@ -191,5 +150,29 @@ class _ListaPreparadaPageState extends State<ListaPreparadaPage> {
         ),
       ),
     );
+  }
+}
+
+class ListaProvider extends ChangeNotifier {
+  final List<String> _listaPreparada = [];
+  final List<String> _listaComprando = [];
+
+  List<String> get listaPreparada => _listaPreparada;
+  List<String> get listaComprando => _listaComprando;
+
+  void adicionarItemPreparado(String item) {
+    _listaPreparada.add(item);
+    notifyListeners();
+  }
+
+  void removerItemPreparado(int index) {
+    _listaPreparada.removeAt(index);
+    notifyListeners();
+  }
+
+  void moverParaComprando() {
+    _listaComprando.addAll(_listaPreparada);
+    _listaPreparada.clear();
+    notifyListeners();
   }
 }

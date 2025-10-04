@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ListaPage extends StatefulWidget {
   const ListaPage({super.key});
@@ -16,8 +16,6 @@ class _ListaPageState extends State<ListaPage> {
   final TextEditingController quantidadeCtrl = TextEditingController();
   final TextEditingController valorCtrl = TextEditingController();
 
-  List<Map<String, dynamic>> itens = [];
-  double total = 0;
   int? indexEdicao;
 
   @override
@@ -25,14 +23,15 @@ class _ListaPageState extends State<ListaPage> {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
     if (args != null && args is Map<String, dynamic>) {
+      final provider = Provider.of<ListaProvider>(context, listen: false);
       final lista = args['lista'] as Map<String, dynamic>;
       indexEdicao = args['index'] as int?;
 
       mercadoCtrl.text = lista['mercado'] ?? '';
-      total = lista['total'] ?? 0;
-
-      final itensRecebidos = lista['itens'] as List;
-      itens = itensRecebidos.map((e) => Map<String, dynamic>.from(e)).toList();
+      setState(() {
+        provider.listaComprando =
+            List<Map<String, dynamic>>.from(lista['itens']);
+      });
     }
   }
 
@@ -45,14 +44,14 @@ class _ListaPageState extends State<ListaPage> {
 
     if (produto.isEmpty || valor <= 0) return;
 
+    final provider = Provider.of<ListaProvider>(context, listen: false);
     setState(() {
-      itens.add({
+      provider.listaComprando.add({
         "produto": produto,
         "marca": marca,
         "valor": valor,
         "quantidade": quantidade,
       });
-      total += valor * quantidade;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -66,19 +65,15 @@ class _ListaPageState extends State<ListaPage> {
   }
 
   void removerItem(int index) {
-    final item = itens[index];
+    final provider = Provider.of<ListaProvider>(context, listen: false);
     setState(() {
-      total -= item['valor'] * item['quantidade'];
-      itens.removeAt(index);
+      provider.listaComprando.removeAt(index);
     });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Item "${item['produto']}" removido')),
-    );
   }
 
   void editarItem(int index) {
-    final item = itens[index];
+    final provider = Provider.of<ListaProvider>(context, listen: false);
+    final item = provider.listaComprando[index];
 
     produtoCtrl.text = item['produto'];
     marcaCtrl.text = item['marca'];
@@ -139,14 +134,12 @@ class _ListaPageState extends State<ListaPage> {
               }
 
               setState(() {
-                total -= item['valor'] * item['quantidade'];
-                itens[index] = {
+                provider.listaComprando[index] = {
                   "produto": novoProduto,
                   "marca": novaMarca,
                   "valor": novoValor,
                   "quantidade": novaQtd,
                 };
-                total += novoValor * novaQtd;
               });
 
               Navigator.pop(context);
@@ -160,6 +153,29 @@ class _ListaPageState extends State<ListaPage> {
         ],
       ),
     );
+  }
+
+  void salvarListaNoHistorico() {
+    final provider = Provider.of<ListaProvider>(context, listen: false);
+
+    final listaCompleta = {
+      "mercado": mercadoCtrl.text,
+      "itens": provider.listaComprando,
+      "total": provider.listaComprando.fold<double>(
+        0,
+        (sum, item) => sum + item['valor'] * item['quantidade'],
+      ),
+      "data": DateTime.now().toIso8601String(),
+    };
+
+    final jsonLista = jsonEncode(listaCompleta);
+    provider.adicionarAoHistorico(jsonLista);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Lista salva no histórico')),
+    );
+
+    Navigator.pop(context, listaCompleta);
   }
 
   InputDecoration campoEstilizado(String label, IconData icon) {
@@ -179,36 +195,14 @@ class _ListaPageState extends State<ListaPage> {
     );
   }
 
-  Future<void> salvarListaNoHistorico() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final listaCompleta = {
-      "mercado": mercadoCtrl.text,
-      "itens": itens,
-      "total": total,
-      "data": DateTime.now().toIso8601String(),
-    };
-
-    final listasJson = prefs.getStringList('listas_salvas') ?? [];
-
-    if (indexEdicao != null) {
-      listasJson[indexEdicao!] = jsonEncode(listaCompleta);
-    } else {
-      listasJson.add(jsonEncode(listaCompleta));
-    }
-
-    await prefs.setStringList('listas_salvas', listasJson);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Lista salva no histórico')),
-    );
-
-    Navigator.pop(context, listaCompleta);
-  }
-
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.bodyMedium;
+    final provider = Provider.of<ListaProvider>(context);
+    final total = provider.listaComprando.fold<double>(
+      0,
+      (sum, item) => sum + item['valor'] * item['quantidade'],
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Modo Comprando')),
@@ -231,10 +225,10 @@ class _ListaPageState extends State<ListaPage> {
                     const SizedBox(width: 6),
                     Text(
                       'Editando lista salva',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.orangeAccent,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: textStyle?.copyWith(
+                        color: Colors.orangeAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -324,14 +318,16 @@ class _ListaPageState extends State<ListaPage> {
                 backgroundColor: Theme.of(context).colorScheme.secondary,
                 foregroundColor: Colors.black,
               ),
-              onPressed: itens.isEmpty ? null : salvarListaNoHistorico,
+              onPressed: provider.listaComprando.isEmpty
+                  ? null
+                  : salvarListaNoHistorico,
             ),
             const SizedBox(height: 10),
             Expanded(
               child: ListView.builder(
-                itemCount: itens.length,
+                itemCount: provider.listaComprando.length,
                 itemBuilder: (context, index) {
-                  final item = itens[index];
+                  final item = provider.listaComprando[index];
                   return Card(
                     color: Theme.of(context).cardColor,
                     shape: RoundedRectangleBorder(
@@ -377,5 +373,21 @@ class _ListaPageState extends State<ListaPage> {
         ),
       ),
     );
+  }
+}
+
+class ListaProvider extends ChangeNotifier {
+  List<Map<String, dynamic>> _listaComprando = [];
+  List<String> historico = [];
+
+  List<Map<String, dynamic>> get listaComprando => _listaComprando;
+  set listaComprando(List<Map<String, dynamic>> value) {
+    _listaComprando = value;
+    notifyListeners();
+  }
+
+  void adicionarAoHistorico(String lista) {
+    historico.add(lista);
+    notifyListeners();
   }
 }
