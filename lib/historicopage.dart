@@ -35,12 +35,18 @@ class _HistoricoPageState extends State<HistoricoPage> {
     final prefs = await SharedPreferences.getInstance();
     final listasJson = prefs.getStringList('listas_salvas') ?? [];
 
-    listasJson.removeAt(index);
-    await prefs.setStringList('listas_salvas', listasJson);
+    if (index >= 0 && index < listasJson.length) {
+      listasJson.removeAt(index);
+      await prefs.setStringList('listas_salvas', listasJson);
 
-    setState(() {
-      historico.removeAt(index);
-    });
+      setState(() {
+        historico.removeAt(index);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lista excluída com sucesso')),
+      );
+    }
   }
 
   void editarLista(Map<String, dynamic> listaOriginal, int index) async {
@@ -57,12 +63,18 @@ class _HistoricoPageState extends State<HistoricoPage> {
       final prefs = await SharedPreferences.getInstance();
       final listasJson = prefs.getStringList('listas_salvas') ?? [];
 
-      listasJson[index] = jsonEncode(resultado);
-      await prefs.setStringList('listas_salvas', listasJson);
+      if (index >= 0 && index < listasJson.length) {
+        listasJson[index] = jsonEncode(resultado);
+        await prefs.setStringList('listas_salvas', listasJson);
 
-      setState(() {
-        historico[index] = resultado;
-      });
+        setState(() {
+          historico[index] = resultado;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lista atualizada com sucesso')),
+        );
+      }
     }
   }
 
@@ -140,7 +152,7 @@ class _HistoricoPageState extends State<HistoricoPage> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.shopping_cart),
-                              tooltip: 'Reutilizar no modo de compra',
+                              tooltip: 'Continuar no modo de compra',
                               onPressed: () => reutilizarLista(lista),
                             ),
                             IconButton(

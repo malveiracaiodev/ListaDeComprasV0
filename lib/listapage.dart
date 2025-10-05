@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ Correção aqui
 import 'package:lista_de_compras/listaprovider.dart';
 
 class ListaPage extends StatefulWidget {
@@ -140,7 +141,7 @@ class _ListaPageState extends State<ListaPage> {
     );
   }
 
-  void salvarListaNoHistorico() {
+  void salvarListaNoHistorico() async {
     final provider = Provider.of<ListaProvider>(context, listen: false);
 
     final listaCompleta = {
@@ -154,12 +155,26 @@ class _ListaPageState extends State<ListaPage> {
     };
 
     final jsonLista = jsonEncode(listaCompleta);
+    final prefs = await SharedPreferences.getInstance();
+    final listasJson = prefs.getStringList('listas_salvas') ?? [];
 
     try {
-      provider.adicionarAoHistorico(jsonLista);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lista salva no histórico')),
-      );
+      if (indexEdicao != null &&
+          indexEdicao! >= 0 &&
+          indexEdicao! < listasJson.length) {
+        listasJson[indexEdicao!] = jsonLista;
+        await prefs.setStringList('listas_salvas', listasJson);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lista atualizada no histórico')),
+        );
+      } else {
+        listasJson.add(jsonLista);
+        await prefs.setStringList('listas_salvas', listasJson);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lista salva no histórico')),
+        );
+      }
+
       Navigator.pop(context, listaCompleta);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -197,7 +212,6 @@ class _ListaPageState extends State<ListaPage> {
 
   @override
   Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.bodyMedium;
     final provider = Provider.of<ListaProvider>(context);
     final total = provider.listaComprando.fold<double>(
       0,
@@ -214,7 +228,6 @@ class _ListaPageState extends State<ListaPage> {
             TextField(
               controller: mercadoCtrl,
               decoration: campoEstilizado('Supermercado', Icons.store),
-              style: textStyle,
             ),
             if (indexEdicao != null)
               Padding(
@@ -225,10 +238,10 @@ class _ListaPageState extends State<ListaPage> {
                     const SizedBox(width: 6),
                     Text(
                       'Editando lista salva',
-                      style: textStyle?.copyWith(
-                        color: Colors.orangeAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.orangeAccent,
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
@@ -324,11 +337,11 @@ class _ListaPageState extends State<ListaPage> {
                       ),
                       title: Text(
                         "${item['produto']} (${item['quantidade']}x) - ${item['marca']}",
-                        style: textStyle,
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       subtitle: Text(
                         "R\$ ${valorTotalItem.toStringAsFixed(2)}",
-                        style: textStyle,
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
